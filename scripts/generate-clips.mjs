@@ -1,7 +1,7 @@
 // Renders the synthetic clips in public/clips/, recorded from a canvas with MediaRecorder inside
 // Chromium (no ffmpeg needed). Run: npm run clips:generate
 //   test-pattern.webm  a moving color-block pattern (scaffold smoke test)
-//   cube-faces.webm    a Speedcube face held inside the guide, one face after another (U F R B L D),
+//   cube-faces.webm    a Speedcube face held inside the guide, one face after another (white, green, red, blue, orange, yellow),
 //                      each held ~1.3s after a ~0.5s slide-in, with mild lighting drift and sensor noise
 // The picture is deterministic (seeded noise, fixed lighting per face); the WebM bytes can differ
 // run to run because MediaRecorder encodes in real time.
@@ -23,7 +23,7 @@ await page.addScriptTag({
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    const recorder = new MediaRecorder(canvas.captureStream(fps), { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: 4000000 });
+    const recorder = new MediaRecorder(canvas.captureStream(fps), { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: 400000 });
     const chunks = [];
     recorder.ondataavailable = (e) => chunks.push(e.data);
     const stopped = new Promise((r) => (recorder.onstop = r));
@@ -64,7 +64,7 @@ write(
   "cube-faces.webm",
   await page.evaluate(() => {
     const W = 320, H = 240, FPS = 15, SLIDE = 8, HOLD = 20;
-    // Standard color scheme. Order shown: U F R B L D (the order the page asks for).
+    // Standard color scheme. The faces are shown one after another.
     const STANDARD = { U: [255, 255, 255], F: [0, 158, 96], R: [196, 30, 58], B: [0, 81, 186], L: [255, 88, 0], D: [255, 213, 0] };
     const ORDER = ["U", "F", "R", "B", "L", "D"];
     // Mild per-face lighting: brightness and a warm/cool tint, as if the room or the cuber's angle shifts.

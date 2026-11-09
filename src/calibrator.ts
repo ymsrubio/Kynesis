@@ -1,23 +1,27 @@
-import { FACES, deltaE, rgbToLab, type Calibration, type Face, type Lab, type Rgb } from "./calibration";
+import { deltaE, rgbToLab, type Calibration, type Lab } from "./calibration";
+import { faceInGuide, type GuideReading } from "./guide";
+
+/** Why the last frame did not count toward a capture. */
+export type Notice = "off-guide" | "already-captured";
 
 export interface CalibratorState {
-  /** The face the cuber should show next; null once all six are captured. */
-  readonly next: Face | null;
-  readonly captured: Readonly<Partial<Record<Face, Lab>>>;
+  /** Colors learned so far, in the order shown; the index is the color class. */
+  readonly captured: readonly Lab[];
   readonly calibration: Calibration | null;
+  readonly notice: Notice | null;
 }
 
 export interface Calibrator {
-  /** Feed the center-sticker color sampled from one video frame. */
-  push(rgb: Rgb): CalibratorState;
+  /** Feed what the guide shows in one video frame. */
+  push(reading: GuideReading): CalibratorState;
   readonly state: CalibratorState;
 }
 
-/** Frames in a row the center sticker must hold still before it is sampled (about half a second at 30 fps). */
+/** Frames in a row the center sticker must hold still before it is sampled (about a third of a second at 30 fps). */
 export const STEADY_FRAMES = 10;
 /** Largest Lab distance a reading may sit from the window's mean and still count as held still; above sensor noise, below any hand movement. */
 export const STEADY_DELTA_E = 4;
-/** A new face must differ from every face already captured by at least this much, so holding one face up twice cannot fill two slots. */
+/** A new color must differ from every color already captured by at least this much, so holding one face up twice cannot fill two slots. */
 export const DISTINCT_DELTA_E = 20;
 
 const mean = (labs: Lab[]): Lab => ({
@@ -27,30 +31,39 @@ const mean = (labs: Lab[]): Lab => ({
 });
 
 /**
- * Walks the faces in order. A face is captured automatically when the last STEADY_FRAMES readings
- * agree, so the cuber never has to let go of the cube to press a button.
+ * Learns six colors, one per face shown, in whatever order the cuber shows them. A color is captured
+ * automatically when the last STEADY_FRAMES readings are in the guide and agree, so the cuber never
+ * has to let go of the cube to press a button.
  */
 export function createCalibrator(): Calibrator {
-  let captured: Partial<Record<Face, Lab>> = {};
+  let captured: readonly Lab[] = [];
   let window: Lab[] = [];
-  let state: CalibratorState = { next: FACES[0], captured, calibration: null };
+  let state: CalibratorState = { captured, calibration: null, notice: null };
+  const set = (notice: Notice | null) => {
+    if (notice !== state.notice) state = { ...state, notice };
+    return state;
+  };
 
   return {
     get state() {
       return state;
     },
-    push(rgb) {
-      if (state.next === null) return state;
-      window = [...window, rgbToLab(rgb)].slice(-STEADY_FRAMES);
-      if (window.length < STEADY_FRAMES) return state;
+    push(reading) {
+      if (state.calibration) return state;
+      if (!faceInGuide(reading)) {
+        window = [];
+        return set("off-guide");
+      }
+      window = [...window, rgbToLab(reading.center)].slice(-STEADY_FRAMES);
+      if (window.length < STEADY_FRAMES) return set(null);
       const center = mean(window);
-      if (window.some((l) => deltaE(l, center) > STEADY_DELTA_E)) return state;
-      if (Object.values(captured).some((l) => deltaE(l, center) < DISTINCT_DELTA_E)) return state;
+      if (window.some((l) => deltaE(l, center) > STEADY_DELTA_E)) return set(null);
+      if (captured.some((l) => deltaE(l, center) < DISTINCT_DELTA_E)) return set("already-captured");
 
-      captured = { ...captured, [state.next]: center };
-      const next = FACES.find((f) => captured[f] === undefined) ?? null;
-      const calibration = next === null ? ({ ...captured } as Calibration) : null;
-      state = { next, captured, calibration };
+      captured = [...captured, center];
+      const [a, b, c, d, e, f] = captured;
+      const calibration = captured.length === 6 ? ([a, b, c, d, e, f] as Calibration) : null;
+      state = { captured, calibration, notice: null };
       return state;
     },
   };

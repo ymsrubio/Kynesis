@@ -1,11 +1,14 @@
-export type Face = "U" | "R" | "F" | "D" | "L" | "B";
 export type Rgb = readonly [r: number, g: number, b: number];
 export interface Lab { readonly L: number; readonly a: number; readonly b: number }
 
-/** How one Speedcube's six sticker colors look under the current lighting, keyed by the face they belong to. */
-export type Calibration = Readonly<Record<Face, Lab>>;
-
-export const FACES: readonly Face[] = ["U", "F", "R", "B", "L", "D"];
+/**
+ * How one Speedcube's six sticker colors look under the current lighting: six color classes, in the
+ * order they were learned. A class id says "same color as", never which face: faces are named by
+ * position in the cuber's view, which changes with every Rotation.
+ */
+export type Calibration = readonly [Lab, Lab, Lab, Lab, Lab, Lab];
+export type ColorClass = 0 | 1 | 2 | 3 | 4 | 5;
+export const COLOR_CLASSES: readonly ColorClass[] = [0, 1, 2, 3, 4, 5];
 
 const WHITE = [0.95047, 1, 1.08883] as const; // D65
 
@@ -29,20 +32,15 @@ export function deltaE(x: Lab, y: Lab): number {
   return Math.hypot(x.L - y.L, x.a - y.a, x.b - y.b);
 }
 
-/** The face whose calibrated color is nearest the sample. Pure: same inputs, same face. */
-export function classify(calibration: Calibration, rgb: Rgb): Face {
+/** The color class nearest the sample. Pure: same inputs, same face. */
+export function classify(calibration: Calibration, rgb: Rgb): ColorClass {
   const sample = rgbToLab(rgb);
-  let best: Face = FACES[0];
-  for (const face of FACES) {
-    if (deltaE(calibration[face], sample) < deltaE(calibration[best], sample)) best = face;
+  let best: ColorClass = 0;
+  for (const c of COLOR_CLASSES) {
+    if (deltaE(calibration[c], sample) < deltaE(calibration[best], sample)) best = c;
   }
   return best;
 }
-
-/** How the cuber is asked for each face: the standard color scheme puts white on U, green on F, red on R, blue on B, orange on L, yellow on D. */
-export const FACE_COLOR_NAME: Readonly<Record<Face, string>> = {
-  U: "white", F: "green", R: "red", B: "blue", L: "orange", D: "yellow",
-};
 
 const finv = (t: number) => (t ** 3 > 216 / 24389 ? t ** 3 : (116 * t - 16) / (24389 / 27));
 const gamma = (v: number) => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
@@ -58,5 +56,6 @@ export function labToRgb({ L, a, b }: Lab): Rgb {
     -0.969266 * x + 1.8760108 * yy + 0.041556 * z,
     0.0556434 * x - 0.2040259 * yy + 1.0572252 * z,
   ];
-  return lin.map((v) => Math.min(255, Math.max(0, gamma(Math.max(0, v))))) as unknown as Rgb;
+  const [r, g, bl] = lin.map((v) => Math.min(255, Math.max(0, gamma(Math.max(0, v)))));
+  return [r, g, bl];
 }

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { classify, deltaE, labToRgb, rgbToLab, type Calibration, type Face, type Rgb } from "../src/calibration";
+import { classify, deltaE, labToRgb, rgbToLab, type Calibration, type Rgb } from "../src/calibration";
 
-// Standard speedcube colors (WCA scheme): U white, F green, R red, B blue, L orange, D yellow.
-const STANDARD: Record<Face, Rgb> = {
-  U: [255, 255, 255], F: [0, 158, 96], R: [196, 30, 58], B: [0, 81, 186], L: [255, 88, 0], D: [255, 213, 0],
+// Six speedcube sticker colors (white, green, red, blue, orange, yellow). Class ids carry no face meaning.
+const STANDARD: readonly Rgb[] = [[255, 255, 255], [0, 158, 96], [196, 30, 58], [0, 81, 186], [255, 88, 0], [255, 213, 0]];
+const under = (k: number, rgb: Rgb): Rgb => [Math.min(255, rgb[0] * k), Math.min(255, rgb[1] * k), Math.min(255, rgb[2] * k)];
+const calibrationUnder = (k: number): Calibration => {
+  const [a, b, c, d, e, f] = STANDARD.map((rgb) => rgbToLab(under(k, rgb)));
+  return [a, b, c, d, e, f];
 };
-const under = (k: number, rgb: Rgb): Rgb => [rgb[0] * k, rgb[1] * k, rgb[2] * k].map((v) => Math.min(255, v)) as unknown as Rgb;
-const calibrationUnder = (k: number): Calibration =>
-  Object.fromEntries(Object.entries(STANDARD).map(([f, c]) => [f, rgbToLab(under(k, c))])) as Calibration;
 
 describe("rgbToLab", () => {
   it("converts sRGB to CIE Lab (D65) matching published values", () => {
@@ -29,23 +29,23 @@ describe("deltaE", () => {
 });
 
 describe("classify", () => {
-  it("labels each calibration color with its own face", () => {
+  it("labels each calibration color with its own class", () => {
     const cal = calibrationUnder(1);
-    for (const [face, rgb] of Object.entries(STANDARD)) expect(classify(cal, rgb)).toBe(face);
+    STANDARD.forEach((rgb, i) => expect(classify(cal, rgb)).toBe(i));
   });
 
-  it("follows the lighting: dim samples match a dim calibration, not a bright one's neighbours", () => {
+  it("follows the lighting: dim samples match a dim calibration", () => {
     const cal = calibrationUnder(0.6);
-    for (const [face, rgb] of Object.entries(STANDARD)) {
-      const noisy: Rgb = [under(0.6, rgb)[0] + 6, under(0.6, rgb)[1] - 5, under(0.6, rgb)[2] + 4];
-      expect(classify(cal, noisy)).toBe(face);
-    }
+    STANDARD.forEach((rgb, i) => {
+      const [r, g, b] = under(0.6, rgb);
+      expect(classify(cal, [r + 6, g - 5, b + 4])).toBe(i);
+    });
   });
 });
 
 describe("labToRgb", () => {
   it("inverts rgbToLab so learned colors can be shown back", () => {
-    for (const rgb of Object.values(STANDARD)) {
+    for (const rgb of STANDARD) {
       const back = labToRgb(rgbToLab(rgb));
       back.forEach((v, i) => expect(v).toBeCloseTo(rgb[i], 0));
     }
