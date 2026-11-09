@@ -3,11 +3,21 @@ import { expect, test } from "@playwright/test";
 const CLIP = "/?clip=/clips/test-pattern.webm";
 
 async function isPlaying(page: import("@playwright/test").Page) {
-  return page.locator("#feed").evaluate(async (v: HTMLVideoElement) => {
-    const t0 = v.currentTime;
-    await new Promise((r) => setTimeout(r, 500));
-    return v.videoWidth > 0 && v.currentTime > t0;
+  const time = () => page.locator("#feed").evaluate((v: HTMLVideoElement) => v.currentTime);
+  const t0 = await time();
+  await expect.poll(time).toBeGreaterThan(t0);
+  return page.locator("#feed").evaluate((v: HTMLVideoElement) => v.videoWidth > 0);
+}
+
+function trackExternalRequests(page: import("@playwright/test").Page) {
+  const external: string[] = [];
+  page.on("request", (r) => {
+    const url = new URL(r.url());
+    if (!["localhost", ""].includes(url.hostname) && !["data:", "blob:"].includes(url.protocol)) {
+      external.push(r.url());
+    }
   });
+  return external;
 }
 
 test.describe("playing a recorded clip", () => {
@@ -24,14 +34,15 @@ test.describe("playing a recorded clip", () => {
   });
 
   test("sends no requests to any other host", async ({ page }) => {
-    const external: string[] = [];
-    page.on("request", (r) => {
-      const url = new URL(r.url());
-      if (!["localhost", ""].includes(url.hostname) && !["data:", "blob:"].includes(url.protocol)) {
-        external.push(r.url());
-      }
-    });
+    const external = trackExternalRequests(page);
     await page.goto(CLIP);
+    await expect(page.locator("#status")).toHaveAttribute("data-state", "playing");
+    expect(external).toEqual([]);
+  });
+
+  test("ignores a clip URL on another host", async ({ page }) => {
+    const external = trackExternalRequests(page);
+    await page.goto("/?clip=http://evil.test/a.webm");
     await expect(page.locator("#status")).toHaveAttribute("data-state", "playing");
     expect(external).toEqual([]);
   });

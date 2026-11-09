@@ -3,5 +3,4 @@ export interface VideoSource {
   readonly kind: "camera" | "clip";
   /** Starts playing into `video`. Rejects if the source cannot be opened. */
   start(video: HTMLVideoElement): Promise<void>;
-  stop(): void;
 }

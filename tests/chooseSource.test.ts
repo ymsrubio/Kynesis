@@ -14,3 +14,12 @@ describe("chooseSource", () => {
     expect(chooseSource("?clip=").kind).toBe("camera");
   });
 });
+
+describe("chooseSource same-origin rule", () => {
+  it.each(["https://evil.test/a.webm", "//evil.test/a.webm", "/\\evil.test/a.webm", "a.webm"])(
+    "ignores the off-device clip %s and uses the camera",
+    (clip) => {
+      expect(chooseSource(`?clip=${encodeURIComponent(clip)}`).kind).toBe("camera");
+    },
+  );
+});
