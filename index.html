@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kynesis</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <section class="feed" aria-label="Camera feed">
+        <video id="feed" autoplay muted playsinline></video>
+        <p id="status" role="status">Starting…</p>
+      </section>
+      <section class="move-log" aria-label="Move log">
+        <h2>Move log</h2>
+        <ol id="moves" data-testid="move-log"></ol>
+        <p id="moves-empty" class="empty">No moves yet</p>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
