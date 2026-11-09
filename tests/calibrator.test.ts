@@ -4,7 +4,7 @@ import { createCalibrator } from "../src/calibrator";
 import type { GuideReading } from "../src/guide";
 
 const COLORS: Rgb[] = [[240, 240, 235], [10, 150, 90], [190, 30, 50], [10, 80, 180], [250, 90, 10], [250, 210, 20]];
-const reading = (rgb: Rgb): GuideReading => ({ center: rgb, inner: [rgb, rgb, rgb, rgb], gapLightness: [2, 2, 2, 2] });
+const reading = (rgb: Rgb): GuideReading => ({ center: rgb, inner: [rgb, rgb, rgb, rgb], extent: { left: 22, right: 22, up: 22, down: 22 } });
 /** A face off-center: the guide's center sticker color differs from what surrounds it. */
 const offGuide = (rgb: Rgb): GuideReading => ({ ...reading(rgb), inner: [COLORS[1], COLORS[1], COLORS[1], COLORS[1]] });
 type C = ReturnType<typeof createCalibrator>;
@@ -71,6 +71,13 @@ describe("Calibrator", () => {
   it("does not capture a face that is not inside the guide, and says so", () => {
     const c = createCalibrator();
     hold(c, offGuide(COLORS[0]), 30);
+    expect(c.state.captured).toHaveLength(0);
+    expect(c.state.notice).toBe("off-guide");
+  });
+
+  it("does not capture a sticker that is found but far from the guide's middle", () => {
+    const c = createCalibrator();
+    hold(c, { ...reading(COLORS[0]), extent: { left: 4, right: 40, up: 22, down: 22 } }, 30);
     expect(c.state.captured).toHaveLength(0);
     expect(c.state.notice).toBe("off-guide");
   });

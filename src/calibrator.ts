@@ -62,7 +62,7 @@ export function createCalibrator(): Calibrator {
 
       captured = [...captured, center];
       const [a, b, c, d, e, f] = captured;
-      const calibration = captured.length === 6 ? ([a, b, c, d, e, f] as Calibration) : null;
+      const calibration: Calibration | null = captured.length === 6 ? [a, b, c, d, e, f] : null;
       state = { captured, calibration, notice: null };
       return state;
     },
