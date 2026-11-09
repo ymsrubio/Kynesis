@@ -9,14 +9,33 @@
   <body>
     <main>
       <section class="feed" aria-label="Camera feed">
-        <video id="feed" autoplay muted playsinline></video>
+        <div class="stage">
+          <video id="feed" autoplay muted playsinline></video>
+          <div class="guide" aria-hidden="true"></div>
+        </div>
         <p id="status" role="status">Starting…</p>
+      </section>
+      <aside>
+      <section class="calibration" aria-label="Calibration">
+        <h2>Calibration</h2>
+        <p id="calibration-prompt" role="status">Hold your cube inside the guide, then start calibration.</p>
+        <p id="calibration-notice" role="alert" class="notice"></p>
+        <button id="calibrate" type="button">Start calibration</button>
+        <ul class="swatches">
+          <li data-slot="0" aria-label="Color 1"></li>
+          <li data-slot="1" aria-label="Color 2"></li>
+          <li data-slot="2" aria-label="Color 3"></li>
+          <li data-slot="3" aria-label="Color 4"></li>
+          <li data-slot="4" aria-label="Color 5"></li>
+          <li data-slot="5" aria-label="Color 6"></li>
+        </ul>
       </section>
       <section class="move-log" aria-label="Move log">
         <h2>Move log</h2>
         <ol id="moves" data-testid="move-log"></ol>
         <p id="moves-empty" class="empty">No moves yet</p>
       </section>
+      </aside>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
