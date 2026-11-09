@@ -1,0 +1,9 @@
+body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: #eee; }
+main { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; padding: 1rem; min-height: 100vh; box-sizing: border-box; }
+video { width: 100%; background: #000; border-radius: 8px; }
+.move-log { background: #1c1c1c; border-radius: 8px; padding: 1rem; }
+.move-log h2 { margin-top: 0; }
+.move-log ol { font-family: ui-monospace, monospace; padding-left: 1.5rem; }
+.empty { color: #888; }
+#status { color: #aaa; }
+@media (max-width: 700px) { main { grid-template-columns: 1fr; } }
